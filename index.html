@@ -131,6 +131,18 @@
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
+    const houses = {
+      town: [
+        { x: 4, y: 2, label: 'Professor' },
+        { x: 9, y: 2, label: 'Store' },
+        { x: 4, y: 7, label: 'House' }
+      ],
+      route: [
+        { x: 6, y: 2, label: 'Patch' },
+        { x: 10, y: 6, label: 'Grass' }
+      ]
+    };
+
     const areas = {
       town: townMap,
       route: routeMap,
@@ -148,6 +160,11 @@
       name: 'Charmander'
     };
 
+    const items = {
+      potion: 2,
+      pokeball: 5,
+    };
+
     const keys = { up: false, down: false, left: false, right: false };
     let battleMode = false;
     let battleMenuIndex = 0;
@@ -158,6 +175,8 @@
     let enemyDamage = 0;
     let statusText = 'Welcome to Pallet Town!';
     let areaText = 'Town';
+    let infoMode = false;
+    let infoLabel = '';
 
     const wildPokemon = [
       { name: 'Pikachu', hp: 18, maxHp: 18 },
@@ -185,6 +204,15 @@
         }
       }
 
+      (houses[currentArea] || []).forEach((house) => {
+        ctx.fillStyle = '#fef3c7';
+        ctx.fillRect(house.x * tile + 4, house.y * tile + 4, 20, 20);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 8px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(house.label, house.x * tile + 14, house.y * tile + 32);
+      });
+
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
@@ -200,6 +228,14 @@
       if (y < 0 || y >= map.length) return false;
       if (x < 0 || x >= map[y].length) return false;
       return map[y][x] === 0;
+    }
+
+    function checkHouseInteraction() {
+      const matched = (houses[currentArea] || []).find((house) => house.x === player.x && house.y === player.y);
+      if (matched) {
+        infoMode = true;
+        infoLabel = `${matched.label}: You found a useful spot.`;
+      }
     }
 
     function changeArea() {
@@ -218,8 +254,19 @@
       }
     }
 
+    function usePotion() {
+      if (items.potion > 0) {
+        items.potion -= 1;
+        player.hp = Math.min(player.maxHp, player.hp + 12);
+        statusText = 'You used a Potion!';
+      } else {
+        statusText = 'No Potions left!';
+      }
+    }
+
     function tryMove(dx, dy) {
       if (battleMode) return;
+
       const nx = player.x + dx;
       const ny = player.y + dy;
 
@@ -227,12 +274,14 @@
         if (currentArea === 'town' && nx === 14 && ny === 5) {
           changeArea();
           statusText = 'You entered Route 1!';
+          infoMode = false;
         }
         return;
       }
 
       player.x = nx;
       player.y = ny;
+      infoMode = false;
 
       if (currentArea === 'route' && player.x === 13 && player.y === 5) {
         changeArea();
@@ -242,6 +291,8 @@
       if (currentArea === 'route' && Math.random() < 0.18) {
         startBattle();
       }
+
+      checkHouseInteraction();
     }
 
     function startBattle() {
@@ -361,13 +412,37 @@
       ctx.fillText(encounterText, canvas.width / 2, 150);
     }
 
+    function drawInfoPanel() {
+      if (!infoMode) return;
+      ctx.fillStyle = 'rgba(15,23,42,0.8)';
+      ctx.fillRect(40, 220, 400, 70);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.strokeRect(40, 220, 400, 70);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(infoLabel, 240, 255);
+      ctx.fillText('Press B to close', 240, 270);
+    }
+
+    function drawInventory() {
+      ctx.fillStyle = 'rgba(15,23,42,0.8)';
+      ctx.fillRect(300, 12, 150, 60);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.strokeRect(300, 12, 150, 60);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Potions: ${items.potion}`, 312, 30);
+      ctx.fillText(`Balls: ${items.pokeball}`, 312, 48);
+    }
+
     function draw() {
       drawMap();
+      drawInventory();
       drawPlayer();
-
-      if (battleMode) {
-        drawBattle();
-      }
+      if (infoMode) drawInfoPanel();
+      if (battleMode) drawBattle();
     }
 
     function update() {
@@ -412,13 +487,23 @@
     bindButton('down', 'down');
 
     document.getElementById('aBtn').addEventListener('click', () => {
-      if (!battleMode) return;
-      if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
+      if (battleMode) {
+        if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
+        return;
+      }
+      if (infoMode) {
+        infoMode = false;
+        return;
+      }
+      usePotion();
     });
 
     document.getElementById('bBtn').addEventListener('click', () => {
-      if (!battleMode) return;
-      runFromBattle();
+      if (battleMode) {
+        runFromBattle();
+        return;
+      }
+      infoMode = false;
     });
 
     window.addEventListener('keydown', (e) => {
@@ -434,6 +519,8 @@
           if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
         }
         if (e.key === 'b' || e.key === 'B') runFromBattle();
+      } else if (infoMode && (e.key === 'b' || e.key === 'B')) {
+        infoMode = false;
       }
     });
 
