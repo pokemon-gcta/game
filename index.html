@@ -1,1054 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pokémon GBA - Battle System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon GBA Style</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { box-sizing: border-box; }
     html, body {
-      width: 100%;
+      margin: 0;
       height: 100%;
-      font-family: 'Arial', sans-serif;
+      background: #111827;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
     }
-    
     body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
+      justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      padding: 10px;
-      overflow-y: auto;
     }
-    
-    .container {
+    .game-wrap {
+      width: min(100vw, 960px);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
-      width: 100%;
-      justify-content: flex-start;
+      gap: 12px;
     }
-    
     canvas {
-      border: 6px solid #333;
-      border-radius: 12px;
-      background: #000;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      display: block;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      width: 95vw;
+      width: min(94vw, 960px);
       height: auto;
-      max-width: 960px;
-      aspect-ratio: 480/320;
-      margin-top: 20px;
+      background: #000;
+      border: 4px solid #1f2937;
+      image-rendering: pixelated;
     }
-    
-    .console {
-      background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
-      border: 3px solid #111;
-      border-radius: 12px;
-      padding: 20px;
-      width: 95vw;
-      max-width: 960px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1);
-      margin-bottom: 20px;
-    }
-    
-    .console-label {
-      text-align: center;
-      color: #ffff00;
-      font-weight: bold;
-      font-size: 14px;
-      margin-bottom: 12px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    }
-    
     .controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 30px;
-    }
-    
-    /* D-Pad */
-    .dpad {
       display: grid;
-      grid-template-columns: repeat(3, 50px);
-      grid-template-rows: repeat(3, 50px);
-      gap: 4px;
-      align-items: center;
-      justify-items: center;
-    }
-    
-    .dpad-spacer {
-      grid-column: 2;
-      grid-row: 2;
-    }
-    
-    .dpad-btn {
-      width: 100%;
-      height: 100%;
-      background: #4a5a7a;
-      border: 2px solid #333;
-      border-radius: 4px;
-      color: #fff;
-      font-weight: bold;
-      font-size: 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(3, 60px);
+      gap: 6px;
       user-select: none;
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1);
-      transition: all 0.1s;
+      margin-top: 6px;
     }
-    
-    .dpad-btn:active {
-      background: #667eea;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-      transform: scale(0.95);
-    }
-    
-    .dpad-btn:hover {
-      background: #667eea;
-    }
-    
-    #btnUp { grid-column: 2; grid-row: 1; }
-    #btnDown { grid-column: 2; grid-row: 3; }
-    #btnLeft { grid-column: 1; grid-row: 2; }
-    #btnRight { grid-column: 3; grid-row: 2; }
-    
-    /* Action Buttons */
-    .action-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      align-items: center;
-    }
-    
-    .action-row {
-      display: flex;
-      gap: 15px;
-      justify-content: center;
-    }
-    
-    .action-btn {
-      width: 50px;
-      height: 50px;
-      border: none;
-      border-radius: 50%;
-      font-weight: bold;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
-      user-select: none;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2);
-      transition: all 0.1s;
-    }
-    
-    .action-btn:active {
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-      transform: scale(0.9);
-    }
-    
-    #btnB {
-      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-      color: #fff;
-    }
-    
-    #btnB:hover {
-      background: linear-gradient(135deg, #ff8888 0%, #ff6b6b 100%);
-    }
-    
-    #btnA {
-      background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
-      color: #fff;
-    }
-    
-    #btnA:hover {
-      background: linear-gradient(135deg, #69db7c 0%, #51cf66 100%);
-    }
-    
-    .action-labels {
-      display: flex;
-      gap: 100px;
-      justify-content: center;
-      margin-top: 8px;
-      font-size: 12px;
-      font-weight: bold;
-      color: #fff;
-    }
-    
-    .action-labels span {
-      width: 50px;
-      text-align: center;
-    }
-    
-    .menu-buttons {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
-    .menu-btn {
-      padding: 10px 15px;
-      background: #667eea;
+    .btn {
+      border: 2px solid #374151;
+      background: #4b5563;
       color: white;
-      border: 2px solid #555;
-      border-radius: 5px;
+      font-size: 24px;
+      border-radius: 10px;
       cursor: pointer;
-      font-weight: bold;
-      font-size: 12px;
       touch-action: manipulation;
-      user-select: none;
     }
-    
-    .menu-btn:active {
-      background: #764ba2;
-      transform: scale(0.95);
+    #up { grid-column: 2; grid-row: 1; }
+    #left { grid-column: 1; grid-row: 2; }
+    #right { grid-column: 3; grid-row: 2; }
+    #down { grid-column: 2; grid-row: 3; }
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
     }
-    
-    .menu-btn:hover {
-      background: #764ba2;
+    .action-btn {
+      width: 72px;
+      height: 42px;
+      border-radius: 10px;
+      border: 2px solid #374151;
+      background: #16a34a;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .title {
+      color: white;
+      font-size: 16px;
+      margin-top: 6px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <canvas id="gameCanvas" width="480" height="320"></canvas>
-    
-    <div class="console">
-      <div class="console-label">🎮 GBA CONTROLS</div>
-      
-      <div class="controls">
-        <!-- D-Pad -->
-        <div class="dpad">
-          <button class="dpad-btn" id="btnUp">⬆️︎</button>
-          <div class="dpad-spacer"></div>
-          <button class="dpad-btn" id="btnLeft">⬅️︎</button>
-          <button class="dpad-btn" id="btnRight">➡️︎</button>
-          <div class="dpad-spacer"></div>
-          <button class="dpad-btn" id="btnDown">⬇️︎</button>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-          <div class="action-row">
-            <button class="action-btn" id="btnB">B</button>
-            <button class="action-btn" id="btnA">A</button>
-          </div>
-          <div class="action-labels">
-            <span>B</span>
-            <span>A</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Menu Buttons -->
-      <div class="menu-buttons" style="margin-top: 15px;">
-        <button class="menu-btn" id="btnMenu">☰ MENU</button>
-        <button class="menu-btn" id="btnStart">⚔️ BATTLE</button>
-      </div>
+  <div class="game-wrap">
+    <div class="title">Pokémon GBA Style Demo</div>
+    <canvas id="game" width="480" height="320"></canvas>
+
+    <div class="controls">
+      <button class="btn" id="up">⬆</button>
+      <button class="btn" id="left">⬅</button>
+      <button class="btn" id="right">➡</button>
+      <button class="btn" id="down">⬇</button>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn" id="aBtn">A</button>
+      <button class="action-btn" id="bBtn">B</button>
     </div>
   </div>
 
   <script>
-    // Pokémon Game with GBA-style Battle Layout
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    
-    // Sprite cache
-    const spriteCache = {};
-    
-    // Extended Pokémon sprite URLs - 30+ Pokémon!
-    const pokemonBackSprites = {
-      'Bulbasaur': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/bulbasaur.gif',
-      'Charmander': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/charmander.gif',
-      'Squirtle': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/squirtle.gif',
-      'Ivysaur': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/ivysaur.gif',
-      'Charmeleon': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/charmeleon.gif',
-      'Wartortle': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/wartortle.gif',
-      'Venusaur': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/venusaur.gif',
-      'Charizard': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/charizard.gif',
-      'Blastoise': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/blastoise.gif',
-      'Pikachu': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/pikachu.gif',
-      'Raichu': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/raichu.gif',
-      'Psyduck': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/psyduck.gif',
-      'Golduck': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/golduck.gif',
-      'Mankey': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/mankey.gif',
-      'Primeape': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/primeape.gif',
-      'Growlithe': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/growlithe.gif',
-      'Arcanine': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/arcanine.gif',
-      'Poliwag': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/poliwag.gif',
-      'Poliwrath': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/poliwrath.gif',
-      'Abra': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/abra.gif',
-      'Kadabra': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/kadabra.gif',
-      'Alakazam': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/alakazam.gif',
-      'Machop': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/machop.gif',
-      'Machoke': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/machoke.gif',
-      'Machamp': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/machamp.gif',
-      'Bellsprout': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/bellsprout.gif',
-      'Weepinbell': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/weepinbell.gif',
-      'Victreebel': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/victreebel.gif',
-      'Tentacool': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/tentacool.gif',
-      'Tentacruel': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/tentacruel.gif',
-      'Slowpoke': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/slowpoke.gif',
-      'Slowbro': 'https://img.pokemondb.net/sprites/black-white/anim/back-normal/slowbro.gif',
+
+    const tile = 32;
+    const cols = canvas.width / tile;
+    const rows = canvas.height / tile;
+
+    const map = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const player = {
+      x: 1,
+      y: 1,
+      size: 20,
+      color: '#2563eb'
     };
 
-    const pokemonFrontSprites = {
-      'Bulbasaur': 'https://img.pokemondb.net/sprites/black-white/anim/normal/bulbasaur.gif',
-      'Charmander': 'https://img.pokemondb.net/sprites/black-white/anim/normal/charmander.gif',
-      'Squirtle': 'https://img.pokemondb.net/sprites/black-white/anim/normal/squirtle.gif',
-      'Ivysaur': 'https://img.pokemondb.net/sprites/black-white/anim/normal/ivysaur.gif',
-      'Charmeleon': 'https://img.pokemondb.net/sprites/black-white/anim/normal/charmeleon.gif',
-      'Wartortle': 'https://img.pokemondb.net/sprites/black-white/anim/normal/wartortle.gif',
-      'Venusaur': 'https://img.pokemondb.net/sprites/black-white/anim/normal/venusaur.gif',
-      'Charizard': 'https://img.pokemondb.net/sprites/black-white/anim/normal/charizard.gif',
-      'Blastoise': 'https://img.pokemondb.net/sprites/black-white/anim/normal/blastoise.gif',
-      'Pikachu': 'https://img.pokemondb.net/sprites/black-white/anim/normal/pikachu.gif',
-      'Raichu': 'https://img.pokemondb.net/sprites/black-white/anim/normal/raichu.gif',
-      'Psyduck': 'https://img.pokemondb.net/sprites/black-white/anim/normal/psyduck.gif',
-      'Golduck': 'https://img.pokemondb.net/sprites/black-white/anim/normal/golduck.gif',
-      'Mankey': 'https://img.pokemondb.net/sprites/black-white/anim/normal/mankey.gif',
-      'Primeape': 'https://img.pokemondb.net/sprites/black-white/anim/normal/primeape.gif',
-      'Growlithe': 'https://img.pokemondb.net/sprites/black-white/anim/normal/growlithe.gif',
-      'Arcanine': 'https://img.pokemondb.net/sprites/black-white/anim/normal/arcanine.gif',
-      'Poliwag': 'https://img.pokemondb.net/sprites/black-white/anim/normal/poliwag.gif',
-      'Poliwrath': 'https://img.pokemondb.net/sprites/black-white/anim/normal/poliwrath.gif',
-      'Abra': 'https://img.pokemondb.net/sprites/black-white/anim/normal/abra.gif',
-      'Kadabra': 'https://img.pokemondb.net/sprites/black-white/anim/normal/kadabra.gif',
-      'Alakazam': 'https://img.pokemondb.net/sprites/black-white/anim/normal/alakazam.gif',
-      'Machop': 'https://img.pokemondb.net/sprites/black-white/anim/normal/machop.gif',
-      'Machoke': 'https://img.pokemondb.net/sprites/black-white/anim/normal/machoke.gif',
-      'Machamp': 'https://img.pokemondb.net/sprites/black-white/anim/normal/machamp.gif',
-      'Bellsprout': 'https://img.pokemondb.net/sprites/black-white/anim/normal/bellsprout.gif',
-      'Weepinbell': 'https://img.pokemondb.net/sprites/black-white/anim/normal/weepinbell.gif',
-      'Victreebel': 'https://img.pokemondb.net/sprites/black-white/anim/normal/victreebel.gif',
-      'Tentacool': 'https://img.pokemondb.net/sprites/black-white/anim/normal/tentacool.gif',
-      'Tentacruel': 'https://img.pokemondb.net/sprites/black-white/anim/normal/tentacruel.gif',
-      'Slowpoke': 'https://img.pokemondb.net/sprites/black-white/anim/normal/slowpoke.gif',
-      'Slowbro': 'https://img.pokemondb.net/sprites/black-white/anim/normal/slowbro.gif',
+    const keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
     };
 
-    // Real Pokémon Moves Database with proper stats
-    const moves = {
-      1: { name: 'Tackle', power: 40, accuracy: 100, type: 'Normal' },
-      2: { name: 'Scratch', power: 40, accuracy: 100, type: 'Normal' },
-      3: { name: 'Ember', power: 40, accuracy: 100, type: 'Fire' },
-      4: { name: 'Water Gun', power: 40, accuracy: 100, type: 'Water' },
-      5: { name: 'Thunderbolt', power: 90, accuracy: 100, type: 'Electric' },
-      6: { name: 'Psychic', power: 90, accuracy: 100, type: 'Psychic' },
-      7: { name: 'Razor Leaf', power: 55, accuracy: 95, type: 'Grass' },
-      8: { name: 'Flamethrower', power: 90, accuracy: 100, type: 'Fire' },
-      9: { name: 'Hydro Pump', power: 110, accuracy: 80, type: 'Water' },
-      10: { name: 'Thunder Wave', power: 0, accuracy: 100, type: 'Electric' },
-    };
+    let battleMode = false;
+    let encounterText = '';
 
-    // Extended Pokémon stats database
-    const pokemonStats = {
-      'Bulbasaur': { hp: 45, level: 5, moves: [7, 1] },
-      'Charmander': { hp: 39, level: 5, moves: [3, 1] },
-      'Squirtle': { hp: 44, level: 5, moves: [4, 1] },
-      'Ivysaur': { hp: 60, level: 16, moves: [7, 1] },
-      'Charmeleon': { hp: 58, level: 16, moves: [3, 8] },
-      'Wartortle': { hp: 59, level: 16, moves: [4, 1] },
-      'Venusaur': { hp: 80, level: 32, moves: [7, 1] },
-      'Charizard': { hp: 78, level: 32, moves: [8, 1] },
-      'Blastoise': { hp: 79, level: 32, moves: [9, 4] },
-      'Pikachu': { hp: 35, level: 5, moves: [5, 1] },
-      'Raichu': { hp: 60, level: 16, moves: [5, 1] },
-      'Psyduck': { hp: 50, level: 10, moves: [1, 6] },
-      'Golduck': { hp: 80, level: 25, moves: [4, 6] },
-      'Mankey': { hp: 40, level: 8, moves: [2, 1] },
-      'Primeape': { hp: 65, level: 20, moves: [2, 1] },
-      'Growlithe': { hp: 55, level: 12, moves: [3, 1] },
-      'Arcanine': { hp: 90, level: 30, moves: [8, 1] },
-      'Poliwag': { hp: 40, level: 6, moves: [4, 1] },
-      'Poliwrath': { hp: 90, level: 25, moves: [9, 4] },
-      'Abra': { hp: 25, level: 12, moves: [6, 10] },
-      'Kadabra': { hp: 40, level: 20, moves: [6, 10] },
-      'Alakazam': { hp: 55, level: 32, moves: [6, 10] },
-      'Machop': { hp: 70, level: 10, moves: [1, 2] },
-      'Machoke': { hp: 80, level: 20, moves: [1, 2] },
-      'Machamp': { hp: 90, level: 32, moves: [1, 2] },
-      'Bellsprout': { hp: 50, level: 8, moves: [7, 1] },
-      'Weepinbell': { hp: 65, level: 18, moves: [7, 1] },
-      'Victreebel': { hp: 80, level: 30, moves: [7, 1] },
-      'Tentacool': { hp: 40, level: 8, moves: [4, 1] },
-      'Tentacruel': { hp: 80, level: 24, moves: [4, 1] },
-      'Slowpoke': { hp: 90, level: 12, moves: [4, 6] },
-      'Slowbro': { hp: 95, level: 28, moves: [4, 6] },
-    };
+    function drawMap() {
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const value = map[y][x];
+          ctx.fillStyle = value === 1 ? '#3a7d3a' : '#5ec96f';
+          ctx.fillRect(x * tile, y * tile, tile, tile);
 
-    // Load sprite
-    async function loadSprite(pokemonName, isBackView = false) {
-      const urls = isBackView ? pokemonBackSprites : pokemonFrontSprites;
-      const key = pokemonName + (isBackView ? '_back' : '_front');
-      
-      if (spriteCache[key]) return spriteCache[key];
+          if (value === 0) {
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillRect(x * tile + 10, y * tile + 10, 10, 10);
+          }
+        }
+      }
+    }
 
-      const spriteUrl = urls[pokemonName];
-      if (!spriteUrl) return createPlaceholder(pokemonName);
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x * tile + 6, player.y * tile + 6, player.size, player.size);
+    }
 
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = spriteUrl;
-        
-        const timeout = setTimeout(() => {
-          const placeholder = createPlaceholder(pokemonName);
-          spriteCache[key] = placeholder;
-          resolve(placeholder);
-        }, 3000);
+    function isWalkable(x, y) {
+      if (y < 0 || y >= map.length) return false;
+      if (x < 0 || x >= map[y].length) return false;
+      return map[y][x] === 0;
+    }
 
-        img.onload = () => {
-          clearTimeout(timeout);
-          spriteCache[key] = img;
-          resolve(img);
-        };
-        
-        img.onerror = () => {
-          clearTimeout(timeout);
-          const placeholder = createPlaceholder(pokemonName);
-          spriteCache[key] = placeholder;
-          resolve(placeholder);
-        };
+    function tryMove(dx, dy) {
+      if (battleMode) return;
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+
+      if (!isWalkable(nx, ny)) return;
+
+      player.x = nx;
+      player.y = ny;
+
+      if (Math.random() < 0.18) {
+        battleMode = true;
+        const wild = ['Pikachu', 'Charmander', 'Bulbasaur', 'Squirtle', 'Mankey'][Math.floor(Math.random() * 5)];
+        encounterText = `${wild} appeared!`;
+      }
+    }
+
+    function drawBattle() {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(encounterText, canvas.width / 2, canvas.height / 2 - 10);
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText('A to fight', canvas.width / 2, canvas.height / 2 + 30);
+      ctx.fillText('B to run', canvas.width / 2, canvas.height / 2 + 60);
+    }
+
+    function update() {
+      if (!battleMode) {
+        if (keys.up) tryMove(0, -1);
+        if (keys.down) tryMove(0, 1);
+        if (keys.left) tryMove(-1, 0);
+        if (keys.right) tryMove(1, 0);
+      }
+    }
+
+    function draw() {
+      drawMap();
+      drawPlayer();
+
+      if (battleMode) {
+        drawBattle();
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function bindButton(id, key) {
+      const el = document.getElementById(id);
+      el.addEventListener('pointerdown', () => {
+        keys[key] = true;
+      });
+      el.addEventListener('pointerup', () => {
+        keys[key] = false;
+      });
+      el.addEventListener('pointerleave', () => {
+        keys[key] = false;
       });
     }
 
-    function createPlaceholder(name) {
-      const c = document.createElement('canvas');
-      c.width = 96;
-      c.height = 96;
-      const ctx2 = c.getContext('2d');
-      ctx2.fillStyle = '#4169e1';
-      ctx2.fillRect(0, 0, 96, 96);
-      ctx2.fillStyle = '#fff';
-      ctx2.font = 'bold 12px Arial';
-      ctx2.textAlign = 'center';
-      ctx2.fillText(name, 48, 50);
-      return c;
-    }
+    bindButton('up', 'up');
+    bindButton('left', 'left');
+    bindButton('right', 'right');
+    bindButton('down', 'down');
 
-    // All available Pokémon for wild encounters
-    const allPokemon = [
-      'Bulbasaur', 'Charmander', 'Squirtle', 'Ivysaur', 'Charmeleon', 'Wartortle',
-      'Venusaur', 'Charizard', 'Blastoise', 'Pikachu', 'Raichu', 'Psyduck', 'Golduck',
-      'Mankey', 'Primeape', 'Growlithe', 'Arcanine', 'Poliwag', 'Poliwrath', 'Abra',
-      'Kadabra', 'Alakazam', 'Machop', 'Machoke', 'Machamp', 'Bellsprout', 'Weepinbell',
-      'Victreebel', 'Tentacool', 'Tentacruel', 'Slowpoke', 'Slowbro'
-    ];
-
-    // Game state
-    let playerX = 7;
-    let playerY = 5;
-    let scene = 'world'; // 'world' or 'battle'
-    let battleMenuState = 'action'; // 'action', 'moves', 'pokemon', 'items'
-    let playerPokemon = 'Charmander';
-    let playerLevel = 5;
-    let playerMaxHP = pokemonStats['Charmander'].hp;
-    let playerCurrentHP = playerMaxHP;
-    let playerMoves = [1, 3, 2]; // Move IDs
-    let playerParty = ['Charmander', 'Squirtle', 'Bulbasaur'];
-    let playerItems = { 'Potion': 5, 'Super Potion': 2, 'Pokéball': 10 };
-    let enemyPokemon = 'Bulbasaur';
-    let enemyLevel = 5;
-    let enemyMaxHP = pokemonStats['Bulbasaur'].hp;
-    let enemyCurrentHP = enemyMaxHP;
-    let enemyMoves = [7, 1];
-    let playerSprite = null;
-    let enemySprite = null;
-    let selectedMove = 0; // Current move selection in battle
-    let selectedOption = 0; // Action menu selection
-    let battleLog = 'What will Charmander do?';
-    let lastMoveTime = 0;
-    let moveDelay = 200; // Smooth movement delay in ms
-    let moveInProgress = false; // Prevent double move execution
-    
-    // Keyboard key tracking for continuous movement
-    const keysPressed = {};
-    
-    // Battle action menu options
-    const battleActions = ['FIGHT', 'POKÉMON', 'ITEM', 'RUN'];
-    
-    // Buttons
-    const buttons = {
-      up: document.getElementById('btnUp'),
-      down: document.getElementById('btnDown'),
-      left: document.getElementById('btnLeft'),
-      right: document.getElementById('btnRight'),
-      a: document.getElementById('btnA'),
-      b: document.getElementById('btnB'),
-      menu: document.getElementById('btnMenu'),
-      start: document.getElementById('btnStart'),
-    };
-    
-    // Button handlers with smooth movement
-    buttons.up.addEventListener('mousedown', () => { keysPressed['up'] = true; });
-    buttons.up.addEventListener('mouseup', () => { keysPressed['up'] = false; });
-    buttons.up.addEventListener('touchstart', (e) => { e.preventDefault(); keysPressed['up'] = true; });
-    buttons.up.addEventListener('touchend', (e) => { e.preventDefault(); keysPressed['up'] = false; });
-    
-    buttons.down.addEventListener('mousedown', () => { keysPressed['down'] = true; });
-    buttons.down.addEventListener('mouseup', () => { keysPressed['down'] = false; });
-    buttons.down.addEventListener('touchstart', (e) => { e.preventDefault(); keysPressed['down'] = true; });
-    buttons.down.addEventListener('touchend', (e) => { e.preventDefault(); keysPressed['down'] = false; });
-    
-    buttons.left.addEventListener('mousedown', () => { keysPressed['left'] = true; });
-    buttons.left.addEventListener('mouseup', () => { keysPressed['left'] = false; });
-    buttons.left.addEventListener('touchstart', (e) => { e.preventDefault(); keysPressed['left'] = true; });
-    buttons.left.addEventListener('touchend', (e) => { e.preventDefault(); keysPressed['left'] = false; });
-    
-    buttons.right.addEventListener('mousedown', () => { keysPressed['right'] = true; });
-    buttons.right.addEventListener('mouseup', () => { keysPressed['right'] = false; });
-    buttons.right.addEventListener('touchstart', (e) => { e.preventDefault(); keysPressed['right'] = true; });
-    buttons.right.addEventListener('touchend', (e) => { e.preventDefault(); keysPressed['right'] = false; });
-    
-    buttons.a.addEventListener('click', () => {
-      if (scene === 'battle' && !moveInProgress) {
-        if (battleMenuState === 'action') {
-          selectAction();
-        } else if (battleMenuState === 'moves') {
-          executeMove();
-        }
-      }
-    });
-    
-    buttons.b.addEventListener('click', () => {
-      if (scene === 'battle') {
-        if (battleMenuState === 'action') {
-          scene = 'world';
-          console.log('B pressed - Returned to world');
-        } else {
-          battleMenuState = 'action';
-          selectedOption = 0;
-        }
-      }
-    });
-    
-    buttons.menu.addEventListener('click', () => {
-      console.log('MENU clicked, scene:', scene);
-      scene = 'battle';
-      enemyPokemon = allPokemon[Math.floor(Math.random() * allPokemon.length)];
-      const stats = pokemonStats[enemyPokemon];
-      enemyLevel = stats.level;
-      enemyMaxHP = stats.hp;
-      enemyCurrentHP = enemyMaxHP;
-      enemyMoves = stats.moves;
-      playerSprite = null;
-      enemySprite = null;
-      selectedOption = 0;
-      battleMenuState = 'action';
-      battleLog = 'What will ' + playerPokemon + ' do?';
-      moveInProgress = false;
-      console.log('Battle started! Enemy:', enemyPokemon);
-    });
-    
-    buttons.start.addEventListener('click', () => {
-      console.log('BATTLE clicked, scene:', scene);
-      if (scene === 'battle') {
-        scene = 'world';
-        moveInProgress = false;
-        console.log('Returned to world');
-      }
-    });
-    
-    function selectAction() {
-      const action = battleActions[selectedOption];
-      console.log('Selected action:', action);
-      
-      if (action === 'FIGHT') {
-        battleMenuState = 'moves';
-        selectedMove = 0;
-      } else if (action === 'POKÉMON') {
-        battleLog = 'Switch Pokémon? (Not yet implemented)';
-      } else if (action === 'ITEM') {
-        battleLog = 'Use Item? (Not yet implemented)';
-      } else if (action === 'RUN') {
-        const runChance = Math.random() * 100;
-        if (runChance > 50) {
-          battleLog = 'Escaped successfully!';
-          setTimeout(() => {
-            scene = 'world';
-            battleMenuState = 'action';
-            moveInProgress = false;
-          }, 1000);
-        } else {
-          battleLog = 'Could not escape!';
-          setTimeout(() => {
-            battleMenuState = 'action';
-            selectedOption = 0;
-            moveInProgress = false;
-            enemyAttack();
-          }, 1000);
-        }
-      }
-    }
-    
-    function executeMove() {
-      if (moveInProgress) return;
-      moveInProgress = true;
-      
-      const selectedMoveId = playerMoves[selectedMove];
-      const moveData = moves[selectedMoveId];
-      const moveName = moveData ? moveData.name : 'Unknown';
-      
-      console.log('A pressed - Executing move:', moveName);
-      
-      // Calculate damage with accuracy
-      const accuracy = moveData ? moveData.accuracy : 100;
-      const didHit = Math.random() * 100 < accuracy;
-      
-      if (!didHit) {
-        battleLog = playerPokemon + ' used ' + moveName + ' but it missed!';
-      } else {
-        // Damage calculation with variance
-        const baseDamage = moveData ? (moveData.power || 15) : 15;
-        const variance = Math.floor(Math.random() * 10) - 5; // -5 to +5
-        const damage = Math.max(1, Math.floor(baseDamage / 2 + variance));
-        
-        enemyCurrentHP = Math.max(0, enemyCurrentHP - damage);
-        battleLog = playerPokemon + ' used ' + moveName + '! Dealt ' + damage + ' damage!';
-      }
-      
-      battleMenuState = 'action';
-      selectedOption = 0;
-      
-      // Enemy attacks back
-      setTimeout(() => {
-        if (enemyCurrentHP > 0) {
-          enemyAttack();
-          moveInProgress = false;
-        } else {
-          battleLog = enemyPokemon + ' fainted! You won!';
-          moveInProgress = false;
-        }
-      }, 800);
-    }
-    
-    function enemyAttack() {
-      const enemyMoveId = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
-      const enemyMoveData = moves[enemyMoveId];
-      const enemyMoveName = enemyMoveData ? enemyMoveData.name : 'Unknown';
-      
-      // Enemy accuracy check
-      const accuracy = enemyMoveData ? enemyMoveData.accuracy : 100;
-      const didHit = Math.random() * 100 < accuracy;
-      
-      if (!didHit) {
-        battleLog = enemyPokemon + ' used ' + enemyMoveName + ' but it missed!';
-      } else {
-        const baseDamage = enemyMoveData ? (enemyMoveData.power || 15) : 15;
-        const variance = Math.floor(Math.random() * 10) - 5;
-        const enemyDamage = Math.max(1, Math.floor(baseDamage / 2 + variance));
-        playerCurrentHP = Math.max(0, playerCurrentHP - enemyDamage);
-        battleLog = enemyPokemon + ' used ' + enemyMoveName + '! Dealt ' + enemyDamage + ' damage!';
-      }
-      
-      if (playerCurrentHP === 0) {
-        battleLog = playerPokemon + ' fainted!';
-      } else {
-        battleLog = 'What will ' + playerPokemon + ' do?';
-      }
-    }
-    
-    // Keyboard support with continuous movement
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp') keysPressed['up'] = true;
-      if (e.key === 'ArrowDown') keysPressed['down'] = true;
-      if (e.key === 'ArrowLeft') keysPressed['left'] = true;
-      if (e.key === 'ArrowRight') keysPressed['right'] = true;
-      
-      if (e.key === 'z' || e.key === 'Z') {
-        if (scene === 'battle' && !moveInProgress) {
-          if (battleMenuState === 'action') selectAction();
-          else if (battleMenuState === 'moves') executeMove();
-        }
-        e.preventDefault();
-      }
-      if (e.key === 'x' || e.key === 'X') {
-        if (scene === 'battle') {
-          if (battleMenuState === 'action') {
-            scene = 'world';
-            moveInProgress = false;
-          } else {
-            battleMenuState = 'action';
-            selectedOption = 0;
-          }
-        }
-        e.preventDefault();
-      }
-      if (e.key === 'Enter') { 
-        scene = scene === 'world' ? 'battle' : 'world';
-        moveInProgress = false;
-        if (scene === 'battle') {
-          enemyPokemon = allPokemon[Math.floor(Math.random() * allPokemon.length)];
-          const stats = pokemonStats[enemyPokemon];
-          enemyLevel = stats.level;
-          enemyMaxHP = stats.hp;
-          enemyCurrentHP = enemyMaxHP;
-          enemyMoves = stats.moves;
-          playerSprite = null;
-          enemySprite = null;
-          selectedOption = 0;
-          battleMenuState = 'action';
-          battleLog = 'What will ' + playerPokemon + ' do?';
-        }
+    document.getElementById('aBtn').addEventListener('click', () => {
+      if (battleMode) {
+        battleMode = false;
+        encounterText = '';
       }
     });
 
-    document.addEventListener('keyup', (e) => {
-      if (e.key === 'ArrowUp') keysPressed['up'] = false;
-      if (e.key === 'ArrowDown') keysPressed['down'] = false;
-      if (e.key === 'ArrowLeft') keysPressed['left'] = false;
-      if (e.key === 'ArrowRight') keysPressed['right'] = false;
+    document.getElementById('bBtn').addEventListener('click', () => {
+      if (battleMode) {
+        battleMode = false;
+        encounterText = '';
+      }
     });
-    
-    // Update movement based on held keys
-    function updateMovement() {
-      const now = Date.now();
-      if (now - lastMoveTime < moveDelay) return;
-      
-      if (scene === 'world') {
-        if (keysPressed['up'] && playerY > 0) playerY--;
-        if (keysPressed['down'] && playerY < 9) playerY++;
-        if (keysPressed['left'] && playerX > 0) playerX--;
-        if (keysPressed['right'] && playerX < 14) playerX++;
-        
-        if (keysPressed['up'] || keysPressed['down'] || keysPressed['left'] || keysPressed['right']) {
-          lastMoveTime = now;
-        }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') keys.up = true;
+      if (e.key === 'ArrowDown') keys.down = true;
+      if (e.key === 'ArrowLeft') keys.left = true;
+      if (e.key === 'ArrowRight') keys.right = true;
+      if (e.key === 'a' || e.key === 'A') {
+        if (battleMode) battleMode = false;
       }
-      
-      if (scene === 'battle') {
-        if (battleMenuState === 'action') {
-          if (keysPressed['up']) selectedOption = Math.max(0, selectedOption - 2);
-          if (keysPressed['down']) selectedOption = Math.min(3, selectedOption + 2);
-          if (keysPressed['left']) selectedOption = Math.max(0, selectedOption - 1);
-          if (keysPressed['right']) selectedOption = Math.min(3, selectedOption + 1);
-        } else if (battleMenuState === 'moves') {
-          if (keysPressed['up']) selectedMove = Math.max(0, selectedMove - 2);
-          if (keysPressed['down']) selectedMove = Math.min(3, selectedMove + 2);
-          if (keysPressed['left']) selectedMove = Math.max(0, selectedMove - 1);
-          if (keysPressed['right']) selectedMove = Math.min(3, selectedMove + 1);
-        }
-        
-        if (keysPressed['up'] || keysPressed['down'] || keysPressed['left'] || keysPressed['right']) {
-          lastMoveTime = now;
-        }
+      if (e.key === 'b' || e.key === 'B') {
+        if (battleMode) battleMode = false;
       }
-    }
-    
-    // Draw world
-    function drawWorld() {
-      // Background
-      ctx.fillStyle = '#228b22';
-      ctx.fillRect(0, 0, 480, 320);
+    });
 
-      // Grid
-      ctx.strokeStyle = '#008800';
-      ctx.lineWidth = 0.5;
-      ctx.fillStyle = '#00aa00';
-      
-      for (let x = 0; x < 480; x += 32) {
-        for (let y = 0; y < 320; y += 32) {
-          ctx.fillRect(x, y, 32, 32);
-          ctx.strokeRect(x, y, 32, 32);
-        }
-      }
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp') keys.up = false;
+      if (e.key === 'ArrowDown') keys.down = false;
+      if (e.key === 'ArrowLeft') keys.left = false;
+      if (e.key === 'ArrowRight') keys.right = false;
+    });
 
-      // Player (blue square)
-      const screenX = playerX * 32;
-      const screenY = playerY * 32;
-      ctx.fillStyle = '#0000ff';
-      ctx.fillRect(screenX + 4, screenY + 4, 24, 24);
-      ctx.strokeStyle = '#0000aa';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(screenX + 4, screenY + 4, 24, 24);
-
-      // Position text
-      ctx.fillStyle = '#ffff00';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Pos: ${playerX},${playerY}`, 10, 20);
-      ctx.fillText(`Pokémon: ${playerPokemon}`, 10, 310);
-    }
-
-    async function drawBattle() {
-      // Load sprites
-      if (!playerSprite) playerSprite = await loadSprite(playerPokemon, true);
-      if (!enemySprite) enemySprite = await loadSprite(enemyPokemon, false);
-
-      // Battle background
-      const gradient = ctx.createLinearGradient(0, 0, 0, 320);
-      gradient.addColorStop(0, '#6b5b95');
-      gradient.addColorStop(1, '#3d3d5c');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 480, 320);
-
-      // Draw enemy info box FIRST (top right)
-      drawEnemyInfoBox();
-
-      // Enemy Pokémon (top right below info)
-      if (enemySprite) {
-        ctx.drawImage(enemySprite, 300, 75, 120, 120);
-      }
-
-      // Draw player info box (left side)
-      drawPlayerInfoBox();
-
-      // Player Pokémon (bottom left)
-      if (playerSprite) {
-        ctx.drawImage(playerSprite, 20, 160, 120, 120);
-      }
-
-      // Draw compact battle menu at bottom right
-      drawGBABattleMenu();
-    }
-
-    function drawEnemyInfoBox() {
-      // Enemy box background - compact GBA style
-      ctx.fillStyle = '#c0c8ff';
-      ctx.fillRect(270, 10, 200, 45);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(270, 10, 200, 45);
-
-      // Enemy name and level
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(enemyPokemon, 285, 28);
-
-      ctx.font = '11px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText('Lv' + enemyLevel, 455, 28);
-
-      // HP bar background
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(285, 33, 155, 8);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(285, 33, 155, 8);
-
-      // HP bar foreground
-      const hpPercent = Math.max(0, enemyCurrentHP / enemyMaxHP);
-      ctx.fillStyle = hpPercent > 0.5 ? '#00aa00' : hpPercent > 0.25 ? '#ffaa00' : '#ff0000';
-      ctx.fillRect(285, 33, 155 * hpPercent, 8);
-
-      // HP text
-      ctx.fillStyle = '#000';
-      ctx.font = '9px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(Math.max(0, Math.floor(enemyCurrentHP)) + '/' + enemyMaxHP, 458, 43);
-    }
-
-    function drawPlayerInfoBox() {
-      // Player box background - GBA style (TOP LEFT)
-      ctx.fillStyle = '#c0c8ff';
-      ctx.fillRect(10, 10, 200, 70);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(10, 10, 200, 70);
-
-      // Player name and level
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(playerPokemon, 25, 25);
-
-      ctx.font = '11px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText('Lv' + playerLevel, 195, 25);
-
-      // HP text label
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 10px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText('HP', 25, 42);
-
-      // HP bar background
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(50, 35, 145, 10);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(50, 35, 145, 10);
-
-      // HP bar foreground
-      const hpPercent = Math.max(0, playerCurrentHP / playerMaxHP);
-      ctx.fillStyle = hpPercent > 0.5 ? '#00aa00' : hpPercent > 0.25 ? '#ffaa00' : '#ff0000';
-      ctx.fillRect(50, 35, 145 * hpPercent, 10);
-
-      // HP text
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 9px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(Math.max(0, Math.floor(playerCurrentHP)) + '/' + playerMaxHP, 190, 43);
-    }
-
-    function drawGBABattleMenu() {
-      // Battle log box on LEFT side
-      const logBoxX = 10;
-      const logBoxY = 200;
-      const logBoxWidth = 250;
-      const logBoxHeight = 110;
-
-      // White background box
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(logBoxX, logBoxY, logBoxWidth, logBoxHeight);
-      
-      // Black border
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(logBoxX, logBoxY, logBoxWidth, logBoxHeight);
-
-      // Battle log text
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 9px Arial';
-      ctx.textAlign = 'left';
-      
-      const textX = logBoxX + 8;
-      const textY = logBoxY + 10;
-      const maxWidth = logBoxWidth - 16;
-      const lineHeight = 12;
-      
-      const words = battleLog.split(' ');
-      let line = '';
-      let y = textY;
-      
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' ';
-        const metrics = ctx.measureText(testLine);
-        
-        if (metrics.width > maxWidth) {
-          if (line) {
-            ctx.fillText(line, textX, y);
-            y += lineHeight;
-          }
-          line = words[i] + ' ';
-        } else {
-          line = testLine;
-        }
-      }
-      if (line) {
-        ctx.fillText(line, textX, y);
-      }
-
-      // Menu box on RIGHT side
-      const menuBoxX = 270;
-      const menuBoxY = 200;
-      const menuBoxWidth = 200;
-      const menuBoxHeight = 110;
-
-      // White background box
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(menuBoxX, menuBoxY, menuBoxWidth, menuBoxHeight);
-      
-      // Black border
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(menuBoxX, menuBoxY, menuBoxWidth, menuBoxHeight);
-
-      // Draw menu items grid
-      const menuStartY = menuBoxY + 15;
-      if (battleMenuState === 'action') {
-        drawMenuOptions(menuBoxX, menuStartY);
-      } else if (battleMenuState === 'moves') {
-        drawMoveOptions(menuBoxX, menuStartY);
-      }
-    }
-
-    function drawMenuOptions(baseX, baseY) {
-      const itemWidth = 90;
-      const itemHeight = 20;
-      const gap = 5;
-
-      ctx.font = 'bold 9px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      for (let i = 0; i < 4; i++) {
-        const row = Math.floor(i / 2);
-        const col = i % 2;
-        
-        const x = baseX + 8 + col * (itemWidth + gap);
-        const y = baseY + row * (itemHeight + gap);
-
-        // Highlight selected - yellow background
-        if (i === selectedOption) {
-          ctx.fillStyle = '#ffaa00';
-          ctx.fillRect(x, y, itemWidth, itemHeight);
-          ctx.fillStyle = '#000';
-        } else {
-          ctx.fillStyle = '#000';
-        }
-
-        ctx.fillText(battleActions[i], x + itemWidth / 2, y + itemHeight / 2);
-      }
-    }
-
-    function drawMoveOptions(baseX, baseY) {
-      const itemWidth = 90;
-      const itemHeight = 20;
-      const gap = 5;
-
-      ctx.font = 'bold 9px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      for (let i = 0; i < 4; i++) {
-        const row = Math.floor(i / 2);
-        const col = i % 2;
-        
-        const x = baseX + 8 + col * (itemWidth + gap);
-        const y = baseY + row * (itemHeight + gap);
-
-        // Get move name
-        const moveId = playerMoves[i];
-        const moveName = moveId && moves[moveId] ? moves[moveId].name : '---';
-
-        // Highlight selected - yellow background
-        if (i === selectedMove) {
-          ctx.fillStyle = '#ffaa00';
-          ctx.fillRect(x, y, itemWidth, itemHeight);
-          ctx.fillStyle = '#000';
-        } else {
-          ctx.fillStyle = '#000';
-        }
-
-        ctx.fillText(moveName, x + itemWidth / 2, y + itemHeight / 2);
-      }
-    }
-    
-    // Main game loop
-    function gameLoop() {
-      updateMovement();
-      
-      if (scene === 'world') {
-        drawWorld();
-      } else if (scene === 'battle') {
-        drawBattle();
-      }
-      
-      requestAnimationFrame(gameLoop);
-    }
-    
-    gameLoop();
+    loop();
   </script>
 </body>
 </html>
