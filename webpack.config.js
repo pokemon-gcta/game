@@ -6,7 +6,7 @@ module.exports = {
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
-    publicPath: '/play/',
+    publicPath: '',
   },
   module: {
     rules: [
@@ -25,7 +25,9 @@ module.exports = {
     extensions: ['.ts', '.js'],
   },
   devServer: {
-    static: './dist',
+    static: {
+      directory: path.resolve(__dirname, 'dist'),
+    },
     port: 8080,
     hot: true,
   },
