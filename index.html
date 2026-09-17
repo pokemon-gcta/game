@@ -105,14 +105,13 @@
 
     const map = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+      [1,0,1,1,0,1,0,1,1,1,0,1,1,0,1],
+      [1,0,1,0,0,0,0,0,0,1,0,0,1,0,1],
+      [1,0,1,0,1,1,1,0,0,1,1,0,1,0,1],
+      [1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
+      [1,1,1,1,0,0,1,0,1,0,0,0,1,0,1],
+      [1,0,0,1,0,1,1,0,1,1,1,0,1,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
@@ -120,19 +119,30 @@
     const player = {
       x: 1,
       y: 1,
-      size: 20,
-      color: '#2563eb'
+      color: '#2563eb',
+      hp: 30,
+      maxHp: 30,
+      name: 'Charmander'
     };
 
-    const keys = {
-      up: false,
-      down: false,
-      left: false,
-      right: false
-    };
+    const keys = { up: false, down: false, left: false, right: false };
 
     let battleMode = false;
+    let battleMenuIndex = 0;
     let encounterText = '';
+    let enemyName = '';
+    let enemyHp = 0;
+    let enemyMaxHp = 0;
+    let enemyDamage = 0;
+    let statusText = 'Your adventure begins!';
+
+    const wildPokemon = [
+      { name: 'Pikachu', hp: 18, maxHp: 18 },
+      { name: 'Bulbasaur', hp: 22, maxHp: 22 },
+      { name: 'Squirtle', hp: 20, maxHp: 20 },
+      { name: 'Charmander', hp: 18, maxHp: 18 },
+      { name: 'Mankey', hp: 24, maxHp: 24 }
+    ];
 
     function drawMap() {
       for (let y = 0; y < rows; y++) {
@@ -151,7 +161,7 @@
 
     function drawPlayer() {
       ctx.fillStyle = player.color;
-      ctx.fillRect(player.x * tile + 6, player.y * tile + 6, player.size, player.size);
+      ctx.fillRect(player.x * tile + 6, player.y * tile + 6, 18, 18);
     }
 
     function isWalkable(x, y) {
@@ -171,34 +181,126 @@
       player.y = ny;
 
       if (Math.random() < 0.18) {
-        battleMode = true;
-        const wild = ['Pikachu', 'Charmander', 'Bulbasaur', 'Squirtle', 'Mankey'][Math.floor(Math.random() * 5)];
-        encounterText = `${wild} appeared!`;
+        startBattle();
+      }
+    }
+
+    function startBattle() {
+      const wild = wildPokemon[Math.floor(Math.random() * wildPokemon.length)];
+      enemyName = wild.name;
+      enemyHp = wild.hp;
+      enemyMaxHp = wild.maxHp;
+      enemyDamage = 4 + Math.floor(Math.random() * 6);
+      battleMenuIndex = 0;
+      battleMode = true;
+      encounterText = `${enemyName} appeared!`;
+      statusText = 'What will Charmander do?';
+    }
+
+    function runFromBattle() {
+      const chance = Math.random();
+      if (chance < 0.6) {
+        battleMode = false;
+        statusText = 'You escaped safely!';
+        encounterText = '';
+      } else {
+        statusText = 'You could not escape!';
+        enemyAttack();
+      }
+    }
+
+    function playerAttack() {
+      if (!battleMode) return;
+      const damage = 4 + Math.floor(Math.random() * 7);
+      enemyHp = Math.max(0, enemyHp - damage);
+      statusText = `${player.name} used Ember! It dealt ${damage} damage.`;
+
+      if (enemyHp <= 0) {
+        battleMode = false;
+        encounterText = '';
+        statusText = `${enemyName} fainted! You win!`;
+        return;
+      }
+
+      enemyAttack();
+    }
+
+    function enemyAttack() {
+      const damage = enemyDamage;
+      player.hp = Math.max(0, player.hp - damage);
+      statusText = `${enemyName} used Tackle! It dealt ${damage} damage.`;
+
+      if (player.hp <= 0) {
+        player.hp = player.maxHp;
+        battleMode = false;
+        encounterText = '';
+        statusText = `${player.name} fainted! You recovered at the start.`;
       }
     }
 
     function drawBattle() {
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(encounterText, canvas.width / 2, canvas.height / 2 - 10);
-
-      ctx.fillStyle = '#facc15';
+      ctx.fillStyle = '#dbeafe';
+      ctx.fillRect(18, 18, 180, 58);
+      ctx.strokeStyle = '#111827';
+      ctx.strokeRect(18, 18, 180, 58);
+      ctx.fillStyle = '#111827';
       ctx.font = 'bold 16px Arial';
-      ctx.fillText('A to fight', canvas.width / 2, canvas.height / 2 + 30);
-      ctx.fillText('B to run', canvas.width / 2, canvas.height / 2 + 60);
-    }
+      ctx.textAlign = 'left';
+      ctx.fillText(enemyName, 30, 38);
+      ctx.fillText('Lv 5', 150, 38);
 
-    function update() {
-      if (!battleMode) {
-        if (keys.up) tryMove(0, -1);
-        if (keys.down) tryMove(0, 1);
-        if (keys.left) tryMove(-1, 0);
-        if (keys.right) tryMove(1, 0);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(30, 50, 142, 10);
+      ctx.fillStyle = '#22c55e';
+      const enemyPct = enemyHp / enemyMaxHp;
+      ctx.fillRect(30, 50, 142 * enemyPct, 10);
+
+      ctx.fillStyle = '#dbeafe';
+      ctx.fillRect(18, 180, 180, 70);
+      ctx.strokeStyle = '#111827';
+      ctx.strokeRect(18, 180, 180, 70);
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 12px Arial';
+      ctx.fillText(statusText, 28, 200);
+
+      ctx.fillStyle = '#dbeafe';
+      ctx.fillRect(260, 18, 200, 58);
+      ctx.strokeStyle = '#111827';
+      ctx.strokeRect(260, 18, 200, 58);
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(player.name, 272, 38);
+      ctx.fillText('Lv 5', 394, 38);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(272, 50, 150, 10);
+      ctx.fillStyle = '#22c55e';
+      const playerPct = player.hp / player.maxHp;
+      ctx.fillRect(272, 50, 150 * playerPct, 10);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(250, 180, 210, 110);
+      ctx.strokeStyle = '#111827';
+      ctx.strokeRect(250, 180, 210, 110);
+
+      const options = ['FIGHT', 'RUN'];
+      for (let i = 0; i < options.length; i++) {
+        const y = 200 + i * 28;
+        ctx.fillStyle = i === battleMenuIndex ? '#facc15' : '#1f2937';
+        ctx.fillRect(270, y, 170, 22);
+        ctx.fillStyle = i === battleMenuIndex ? '#111827' : '#f8fafc';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(options[i], 355, y + 15);
       }
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(encounterText, canvas.width / 2, 150);
     }
 
     function draw() {
@@ -208,6 +310,24 @@
       if (battleMode) {
         drawBattle();
       }
+    }
+
+    function update() {
+      if (battleMode) {
+        if (keys.up || keys.down || keys.left || keys.right) {
+          // no movement while in battle
+          keys.up = false;
+          keys.down = false;
+          keys.left = false;
+          keys.right = false;
+        }
+        return;
+      }
+
+      if (keys.up) tryMove(0, -1);
+      if (keys.down) tryMove(0, 1);
+      if (keys.left) tryMove(-1, 0);
+      if (keys.right) tryMove(1, 0);
     }
 
     function loop() {
@@ -235,17 +355,17 @@
     bindButton('down', 'down');
 
     document.getElementById('aBtn').addEventListener('click', () => {
-      if (battleMode) {
-        battleMode = false;
-        encounterText = '';
+      if (!battleMode) return;
+      if (battleMenuIndex === 0) {
+        playerAttack();
+      } else {
+        runFromBattle();
       }
     });
 
     document.getElementById('bBtn').addEventListener('click', () => {
-      if (battleMode) {
-        battleMode = false;
-        encounterText = '';
-      }
+      if (!battleMode) return;
+      runFromBattle();
     });
 
     window.addEventListener('keydown', (e) => {
@@ -253,11 +373,20 @@
       if (e.key === 'ArrowDown') keys.down = true;
       if (e.key === 'ArrowLeft') keys.left = true;
       if (e.key === 'ArrowRight') keys.right = true;
-      if (e.key === 'a' || e.key === 'A') {
-        if (battleMode) battleMode = false;
-      }
-      if (e.key === 'b' || e.key === 'B') {
-        if (battleMode) battleMode = false;
+
+      if (battleMode) {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          battleMenuIndex = 0;
+        }
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+          battleMenuIndex = 1;
+        }
+        if (e.key === 'a' || e.key === 'A') {
+          if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
+        }
+        if (e.key === 'b' || e.key === 'B') {
+          runFromBattle();
+        }
       }
     });
 
