@@ -103,18 +103,41 @@
     const cols = canvas.width / tile;
     const rows = canvas.height / tile;
 
-    const map = [
+    const townMap = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-      [1,0,1,1,0,1,0,1,1,1,0,1,1,0,1],
-      [1,0,1,0,0,0,0,0,0,1,0,0,1,0,1],
-      [1,0,1,0,1,1,1,0,0,1,1,0,1,0,1],
-      [1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
-      [1,1,1,1,0,0,1,0,1,0,0,0,1,0,1],
-      [1,0,0,1,0,1,1,0,1,1,1,0,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,1,1,1,1,1,0,0,0,0,1],
+      [1,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+      [1,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+      [1,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+      [1,0,0,0,1,1,1,1,1,1,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
+
+    const routeMap = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const areas = {
+      town: townMap,
+      route: routeMap,
+    };
+
+    let currentArea = 'town';
+    let map = areas[currentArea];
 
     const player = {
       x: 1,
@@ -126,7 +149,6 @@
     };
 
     const keys = { up: false, down: false, left: false, right: false };
-
     let battleMode = false;
     let battleMenuIndex = 0;
     let encounterText = '';
@@ -134,7 +156,8 @@
     let enemyHp = 0;
     let enemyMaxHp = 0;
     let enemyDamage = 0;
-    let statusText = 'Your adventure begins!';
+    let statusText = 'Welcome to Pallet Town!';
+    let areaText = 'Town';
 
     const wildPokemon = [
       { name: 'Pikachu', hp: 18, maxHp: 18 },
@@ -148,15 +171,24 @@
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           const value = map[y][x];
-          ctx.fillStyle = value === 1 ? '#3a7d3a' : '#5ec96f';
+          ctx.fillStyle = currentArea === 'route' ? '#4f9d66' : '#5ec96f';
           ctx.fillRect(x * tile, y * tile, tile, tile);
 
           if (value === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            if (currentArea === 'route') {
+              ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            } else {
+              ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            }
             ctx.fillRect(x * tile + 10, y * tile + 10, 10, 10);
           }
         }
       }
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(areaText, 10, 18);
     }
 
     function drawPlayer() {
@@ -170,17 +202,44 @@
       return map[y][x] === 0;
     }
 
+    function changeArea() {
+      if (currentArea === 'town') {
+        currentArea = 'route';
+        areaText = 'Route 1';
+        map = areas.route;
+        player.x = 1;
+        player.y = 1;
+      } else {
+        currentArea = 'town';
+        areaText = 'Town';
+        map = areas.town;
+        player.x = 1;
+        player.y = 1;
+      }
+    }
+
     function tryMove(dx, dy) {
       if (battleMode) return;
       const nx = player.x + dx;
       const ny = player.y + dy;
 
-      if (!isWalkable(nx, ny)) return;
+      if (!isWalkable(nx, ny)) {
+        if (currentArea === 'town' && nx === 14 && ny === 5) {
+          changeArea();
+          statusText = 'You entered Route 1!';
+        }
+        return;
+      }
 
       player.x = nx;
       player.y = ny;
 
-      if (Math.random() < 0.18) {
+      if (currentArea === 'route' && player.x === 13 && player.y === 5) {
+        changeArea();
+        statusText = 'You returned to town.';
+      }
+
+      if (currentArea === 'route' && Math.random() < 0.18) {
         startBattle();
       }
     }
@@ -198,8 +257,7 @@
     }
 
     function runFromBattle() {
-      const chance = Math.random();
-      if (chance < 0.6) {
+      if (Math.random() < 0.6) {
         battleMode = false;
         statusText = 'You escaped safely!';
         encounterText = '';
@@ -315,7 +373,6 @@
     function update() {
       if (battleMode) {
         if (keys.up || keys.down || keys.left || keys.right) {
-          // no movement while in battle
           keys.up = false;
           keys.down = false;
           keys.left = false;
@@ -356,11 +413,7 @@
 
     document.getElementById('aBtn').addEventListener('click', () => {
       if (!battleMode) return;
-      if (battleMenuIndex === 0) {
-        playerAttack();
-      } else {
-        runFromBattle();
-      }
+      if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
     });
 
     document.getElementById('bBtn').addEventListener('click', () => {
@@ -375,18 +428,12 @@
       if (e.key === 'ArrowRight') keys.right = true;
 
       if (battleMode) {
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-          battleMenuIndex = 0;
-        }
-        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-          battleMenuIndex = 1;
-        }
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') battleMenuIndex = 0;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') battleMenuIndex = 1;
         if (e.key === 'a' || e.key === 'A') {
           if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
         }
-        if (e.key === 'b' || e.key === 'B') {
-          runFromBattle();
-        }
+        if (e.key === 'b' || e.key === 'B') runFromBattle();
       }
     });
 
