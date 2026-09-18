@@ -8,8 +8,9 @@
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
+      width: 100%;
       height: 100%;
-      background: #111827;
+      background: #101827;
       font-family: Arial, sans-serif;
       overflow: hidden;
     }
@@ -19,7 +20,6 @@
       align-items: center;
     }
     .game-wrap {
-      width: min(100vw, 960px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -31,14 +31,14 @@
       background: #000;
       border: 4px solid #1f2937;
       image-rendering: pixelated;
+      image-rendering: crisp-edges;
     }
     .controls {
       display: grid;
       grid-template-columns: repeat(3, 60px);
       grid-template-rows: repeat(3, 60px);
-      gap: 6px;
+      gap: 8px;
       user-select: none;
-      margin-top: 6px;
     }
     .btn {
       border: 2px solid #374151;
@@ -53,10 +53,11 @@
     #left { grid-column: 1; grid-row: 2; }
     #right { grid-column: 3; grid-row: 2; }
     #down { grid-column: 2; grid-row: 3; }
+
     .actions {
       display: flex;
       gap: 12px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .action-btn {
       width: 72px;
@@ -68,11 +69,13 @@
       font-weight: bold;
       cursor: pointer;
     }
+
     .title {
       color: white;
       font-size: 16px;
       margin-top: 6px;
       text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -143,10 +146,17 @@
       ]
     };
 
-    const areas = {
-      town: townMap,
-      route: routeMap,
+    const trainers = {
+      town: [
+        { x: 8, y: 5, name: 'Rival', hp: 26, maxHp: 26, phrase: "Let's battle!" },
+        { x: 12, y: 7, name: 'Ace', hp: 28, maxHp: 28, phrase: 'I challenge you!' }
+      ],
+      route: [
+        { x: 7, y: 5, name: 'Brock', hp: 30, maxHp: 30, phrase: "You can't pass me!" }
+      ]
     };
+
+    const areas = { town: townMap, route: routeMap };
 
     let currentArea = 'town';
     let map = areas[currentArea];
@@ -177,40 +187,171 @@
     let areaText = 'Town';
     let infoMode = false;
     let infoLabel = '';
+    let titleScreen = true;
+    let selectedStarter = 0;
+    let trainerBattle = false;
+    let trainerData = null;
+    let moveMenuOpen = false;
+    let moveMenuIndex = 0;
+
+    const starters = [
+      { name: 'Bulbasaur', hp: 22, maxHp: 22, img: 'https://img.pokemondb.net/sprites/home/normal/bulbasaur.png' },
+      { name: 'Charmander', hp: 20, maxHp: 20, img: 'https://img.pokemondb.net/sprites/home/normal/charmander.png' },
+      { name: 'Squirtle', hp: 21, maxHp: 21, img: 'https://img.pokemondb.net/sprites/home/normal/squirtle.png' }
+    ];
 
     const wildPokemon = [
-      { name: 'Pikachu', hp: 18, maxHp: 18 },
-      { name: 'Bulbasaur', hp: 22, maxHp: 22 },
-      { name: 'Squirtle', hp: 20, maxHp: 20 },
-      { name: 'Charmander', hp: 18, maxHp: 18 },
-      { name: 'Mankey', hp: 24, maxHp: 24 }
+      { name: 'Pikachu', hp: 18, maxHp: 18, img: 'https://img.pokemondb.net/sprites/home/normal/pikachu.png' },
+      { name: 'Bulbasaur', hp: 22, maxHp: 22, img: 'https://img.pokemondb.net/sprites/home/normal/bulbasaur.png' },
+      { name: 'Squirtle', hp: 20, maxHp: 20, img: 'https://img.pokemondb.net/sprites/home/normal/squirtle.png' },
+      { name: 'Charmander', hp: 18, maxHp: 18, img: 'https://img.pokemondb.net/sprites/home/normal/charmander.png' },
+      { name: 'Mankey', hp: 24, maxHp: 24, img: 'https://img.pokemondb.net/sprites/home/normal/mankey.png' }
     ];
+
+    const battleMoves = {
+      Charmander: ['Ember', 'Scratch', 'Flame Burst', 'Leer'],
+      Bulbasaur: ['Vine Whip', 'Tackle', 'Razor Leaf', 'Growth'],
+      Squirtle: ['Water Pulse', 'Tackle', 'Bubble', 'Withdraw'],
+      Pikachu: ['Thunder Shock', 'Quick Attack', 'Spark', 'Tail Whip'],
+      Mankey: ['Scratch', 'Low Kick', 'Fury Swipes', 'Focus Energy']
+    };
+
+    const assets = {};
+
+    function loadImage(key, src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          assets[key] = img;
+          resolve(img);
+        };
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+    }
+
+    async function loadAssets() {
+      await Promise.all([
+        loadImage('grass', 'assets/grass.png'),
+        loadImage('road', 'assets/road.png'),
+        loadImage('building', 'assets/building.png'),
+        loadImage('player', 'assets/player.png'),
+        loadImage('trainer', 'assets/trainer.png')
+      ]);
+    }
+
+    function fallbackRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawTileImage(img, x, y, size = tile) {
+      if (img) {
+        ctx.drawImage(img, x, y, size, size);
+      } else {
+        ctx.fillStyle = '#4f9d66';
+        ctx.fillRect(x, y, size, size);
+      }
+    }
+
+    function drawHouseSprite(house) {
+      if (assets.building) {
+        ctx.drawImage(assets.building, house.x * tile, house.y * tile, tile, tile);
+      } else {
+        fallbackRect(house.x * tile + 4, house.y * tile + 4, tile - 8, tile - 8, '#fef3c7');
+      }
+    }
+
+    function drawTrainerSprite(trainer) {
+      if (assets.trainer) {
+        ctx.drawImage(assets.trainer, trainer.x * tile, trainer.y * tile, tile, tile);
+      } else {
+        fallbackRect(trainer.x * tile + 3, trainer.y * tile + 3, tile - 6, tile - 6, '#f59e0b');
+      }
+    }
+
+    function drawPlayerSprite() {
+      if (assets.player) {
+        ctx.drawImage(assets.player, player.x * tile, player.y * tile, tile, tile);
+      } else {
+        fallbackRect(player.x * tile + 6, player.y * tile + 6, tile - 12, tile - 12, '#2563eb');
+      }
+    }
+
+    function drawPokemonImage(url, x, y, w, h) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, x, y, w, h);
+      };
+      img.src = url;
+    }
+
+    function getMovesForPokemon(name) {
+      return battleMoves[name] || ['Tackle', 'Growl'];
+    }
+
+    function openMoveMenu() {
+      moveMenuOpen = true;
+      moveMenuIndex = 0;
+    }
+
+    function closeMoveMenu() {
+      moveMenuOpen = false;
+      moveMenuIndex = 0;
+    }
+
+    function useSelectedMove() {
+      if (!battleMode || !moveMenuOpen) return;
+
+      const moves = getMovesForPokemon(player.name);
+      const moveName = moves[moveMenuIndex];
+      const damage = 6 + Math.floor(Math.random() * 9);
+      enemyHp = Math.max(0, enemyHp - damage);
+      statusText = `${player.name} used ${moveName}! It dealt ${damage} damage.`;
+
+      if (enemyHp <= 0) {
+        battleMode = false;
+        moveMenuOpen = false;
+        encounterText = '';
+        statusText = `${enemyName} fainted! You win!`;
+        return;
+      }
+
+      const enemyMoves = getMovesForPokemon(enemyName);
+      const enemyMove = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
+      const enemyDamage = 4 + Math.floor(Math.random() * 8);
+      player.hp = Math.max(0, player.hp - enemyDamage);
+      statusText = `${enemyName} used ${enemyMove}! It dealt ${enemyDamage} damage.`;
+
+      if (player.hp <= 0) {
+        player.hp = player.maxHp;
+        battleMode = false;
+        moveMenuOpen = false;
+        encounterText = '';
+        statusText = `${player.name} fainted! You recovered at the start.`;
+      }
+
+      closeMoveMenu();
+    }
 
     function drawMap() {
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           const value = map[y][x];
-          ctx.fillStyle = currentArea === 'route' ? '#4f9d66' : '#5ec96f';
-          ctx.fillRect(x * tile, y * tile, tile, tile);
-
           if (value === 0) {
-            if (currentArea === 'route') {
-              ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            } else {
-              ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            }
-            ctx.fillRect(x * tile + 10, y * tile + 10, 10, 10);
+            drawTileImage(assets.grass, x * tile, y * tile, tile);
+          } else {
+            drawTileImage(assets.road, x * tile, y * tile, tile);
           }
         }
       }
 
       (houses[currentArea] || []).forEach((house) => {
-        ctx.fillStyle = '#fef3c7';
-        ctx.fillRect(house.x * tile + 4, house.y * tile + 4, 20, 20);
-        ctx.fillStyle = '#1f2937';
-        ctx.font = 'bold 8px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(house.label, house.x * tile + 14, house.y * tile + 32);
+        drawHouseSprite(house);
+      });
+
+      (trainers[currentArea] || []).forEach((trainer) => {
+        drawTrainerSprite(trainer);
       });
 
       ctx.fillStyle = '#f8fafc';
@@ -220,8 +361,77 @@
     }
 
     function drawPlayer() {
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x * tile + 6, player.y * tile + 6, 18, 18);
+      drawPlayerSprite();
+    }
+
+    function drawTitleScreen() {
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('POKÉMON', canvas.width / 2, 70);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText('Choose your starter', canvas.width / 2, 110);
+
+      starters.forEach((starter, index) => {
+        const y = 150 + index * 50;
+        const selected = index === selectedStarter;
+        ctx.fillStyle = selected ? '#facc15' : '#e2e8f0';
+        ctx.fillRect(120, y - 18, 240, 32);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(starter.name, canvas.width / 2, y);
+
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 92, y - 20, 24, 24);
+        };
+        img.src = starter.img;
+      });
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Arial';
+      ctx.fillText('A = select', canvas.width / 2, 270);
+      ctx.fillText('↑ / ↓ to move', canvas.width / 2, 290);
+    }
+
+    function startGame() {
+      titleScreen = false;
+      const picked = starters[selectedStarter];
+      player.name = picked.name;
+      player.hp = picked.hp;
+      player.maxHp = picked.maxHp;
+      statusText = `${picked.name} was chosen!`;
+    }
+
+    function drawInfoPanel() {
+      if (!infoMode) return;
+      ctx.fillStyle = 'rgba(15,23,42,0.8)';
+      ctx.fillRect(40, 220, 400, 70);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.strokeRect(40, 220, 400, 70);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(infoLabel, 240, 255);
+      ctx.fillText('Press B to close', 240, 270);
+    }
+
+    function drawInventory() {
+      ctx.fillStyle = 'rgba(15,23,42,0.8)';
+      ctx.fillRect(300, 12, 150, 60);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.strokeRect(300, 12, 150, 60);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Potions: ${items.potion}`, 312, 30);
+      ctx.fillText(`Balls: ${items.pokeball}`, 312, 48);
     }
 
     function isWalkable(x, y) {
@@ -235,6 +445,22 @@
       if (matched) {
         infoMode = true;
         infoLabel = `${matched.label}: You found a useful spot.`;
+      }
+    }
+
+    function checkTrainerInteraction() {
+      const matched = (trainers[currentArea] || []).find((trainer) => trainer.x === player.x && trainer.y === player.y);
+      if (matched) {
+        trainerBattle = true;
+        trainerData = matched;
+        battleMode = true;
+        enemyName = matched.name;
+        enemyHp = matched.hp;
+        enemyMaxHp = matched.maxHp;
+        enemyDamage = 6;
+        battleMenuIndex = 0;
+        encounterText = matched.name + ' challenges you!';
+        statusText = matched.phrase;
       }
     }
 
@@ -266,7 +492,6 @@
 
     function tryMove(dx, dy) {
       if (battleMode) return;
-
       const nx = player.x + dx;
       const ny = player.y + dy;
 
@@ -293,6 +518,7 @@
       }
 
       checkHouseInteraction();
+      checkTrainerInteraction();
     }
 
     function startBattle() {
@@ -301,15 +527,18 @@
       enemyHp = wild.hp;
       enemyMaxHp = wild.maxHp;
       enemyDamage = 4 + Math.floor(Math.random() * 6);
-      battleMenuIndex = 0;
       battleMode = true;
-      encounterText = `${enemyName} appeared!`;
-      statusText = 'What will Charmander do?';
+      trainerBattle = false;
+      battleMenuIndex = 0;
+      moveMenuOpen = false;
+      encounterText = wild.name + ' appeared!';
+      statusText = 'What will ' + player.name + ' do?';
     }
 
     function runFromBattle() {
       if (Math.random() < 0.6) {
         battleMode = false;
+        trainerBattle = false;
         statusText = 'You escaped safely!';
         encounterText = '';
       } else {
@@ -322,12 +551,13 @@
       if (!battleMode) return;
       const damage = 4 + Math.floor(Math.random() * 7);
       enemyHp = Math.max(0, enemyHp - damage);
-      statusText = `${player.name} used Ember! It dealt ${damage} damage.`;
+      statusText = player.name + ' used Ember! It dealt ' + damage + ' damage.';
 
       if (enemyHp <= 0) {
         battleMode = false;
+        trainerBattle = false;
         encounterText = '';
-        statusText = `${enemyName} fainted! You win!`;
+        statusText = enemyName + ' fainted! You win!';
         return;
       }
 
@@ -337,19 +567,27 @@
     function enemyAttack() {
       const damage = enemyDamage;
       player.hp = Math.max(0, player.hp - damage);
-      statusText = `${enemyName} used Tackle! It dealt ${damage} damage.`;
+      statusText = enemyName + ' used Tackle! It dealt ' + damage + ' damage.';
 
       if (player.hp <= 0) {
         player.hp = player.maxHp;
         battleMode = false;
+        trainerBattle = false;
         encounterText = '';
-        statusText = `${player.name} fainted! You recovered at the start.`;
+        statusText = player.name + ' fainted! You recovered at the start.';
       }
     }
 
     function drawBattle() {
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const enemySprite = wildPokemon.find(x => x.name === enemyName)?.img || starters[0].img;
+      const enemyImg = new Image();
+      enemyImg.onload = () => {
+        ctx.drawImage(enemyImg, 70, 80, 120, 120);
+      };
+      enemyImg.src = enemySprite;
 
       ctx.fillStyle = '#dbeafe';
       ctx.fillRect(18, 18, 180, 58);
@@ -390,20 +628,38 @@
       const playerPct = player.hp / player.maxHp;
       ctx.fillRect(272, 50, 150 * playerPct, 10);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(250, 180, 210, 110);
-      ctx.strokeStyle = '#111827';
-      ctx.strokeRect(250, 180, 210, 110);
+      if (moveMenuOpen) {
+        const moves = getMovesForPokemon(player.name);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(250, 180, 210, 110);
+        ctx.strokeStyle = '#111827';
+        ctx.strokeRect(250, 180, 210, 110);
 
-      const options = ['FIGHT', 'RUN'];
-      for (let i = 0; i < options.length; i++) {
-        const y = 200 + i * 28;
-        ctx.fillStyle = i === battleMenuIndex ? '#facc15' : '#1f2937';
-        ctx.fillRect(270, y, 170, 22);
-        ctx.fillStyle = i === battleMenuIndex ? '#111827' : '#f8fafc';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(options[i], 355, y + 15);
+        moves.forEach((move, index) => {
+          const y = 200 + index * 24;
+          ctx.fillStyle = moveMenuIndex === index ? '#facc15' : '#1f2937';
+          ctx.fillRect(270, y, 170, 18);
+          ctx.fillStyle = moveMenuIndex === index ? '#111827' : '#f8fafc';
+          ctx.font = 'bold 11px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(move, 355, y + 13);
+        });
+      } else {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(250, 180, 210, 110);
+        ctx.strokeStyle = '#111827';
+        ctx.strokeRect(250, 180, 210, 110);
+
+        const options = ['FIGHT', 'RUN'];
+        for (let i = 0; i < options.length; i++) {
+          const y = 200 + i * 28;
+          ctx.fillStyle = i === battleMenuIndex ? '#facc15' : '#1f2937';
+          ctx.fillRect(270, y, 170, 22);
+          ctx.fillStyle = i === battleMenuIndex ? '#111827' : '#f8fafc';
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(options[i], 355, y + 15);
+        }
       }
 
       ctx.fillStyle = '#f8fafc';
@@ -412,32 +668,12 @@
       ctx.fillText(encounterText, canvas.width / 2, 150);
     }
 
-    function drawInfoPanel() {
-      if (!infoMode) return;
-      ctx.fillStyle = 'rgba(15,23,42,0.8)';
-      ctx.fillRect(40, 220, 400, 70);
-      ctx.strokeStyle = '#f8fafc';
-      ctx.strokeRect(40, 220, 400, 70);
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(infoLabel, 240, 255);
-      ctx.fillText('Press B to close', 240, 270);
-    }
-
-    function drawInventory() {
-      ctx.fillStyle = 'rgba(15,23,42,0.8)';
-      ctx.fillRect(300, 12, 150, 60);
-      ctx.strokeStyle = '#f8fafc';
-      ctx.strokeRect(300, 12, 150, 60);
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Potions: ${items.potion}`, 312, 30);
-      ctx.fillText(`Balls: ${items.pokeball}`, 312, 48);
-    }
-
     function draw() {
+      if (titleScreen) {
+        drawTitleScreen();
+        return;
+      }
+
       drawMap();
       drawInventory();
       drawPlayer();
@@ -446,12 +682,15 @@
     }
 
     function update() {
+      if (titleScreen) {
+        if (keys.up) selectedStarter = (selectedStarter - 1 + starters.length) % starters.length;
+        if (keys.down) selectedStarter = (selectedStarter + 1) % starters.length;
+        return;
+      }
+
       if (battleMode) {
         if (keys.up || keys.down || keys.left || keys.right) {
-          keys.up = false;
-          keys.down = false;
-          keys.left = false;
-          keys.right = false;
+          keys.up = false; keys.down = false; keys.left = false; keys.right = false;
         }
         return;
       }
@@ -487,38 +726,78 @@
     bindButton('down', 'down');
 
     document.getElementById('aBtn').addEventListener('click', () => {
-      if (battleMode) {
-        if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
+      if (titleScreen) {
+        startGame();
         return;
       }
+
+      if (battleMode) {
+        if (moveMenuOpen) {
+          useSelectedMove();
+        } else {
+          openMoveMenu();
+        }
+        return;
+      }
+
       if (infoMode) {
         infoMode = false;
         return;
       }
+
       usePotion();
     });
 
     document.getElementById('bBtn').addEventListener('click', () => {
+      if (titleScreen) return;
       if (battleMode) {
-        runFromBattle();
+        if (moveMenuOpen) {
+          closeMoveMenu();
+        } else {
+          runFromBattle();
+        }
         return;
       }
       infoMode = false;
     });
 
     window.addEventListener('keydown', (e) => {
+      if (titleScreen) {
+        if (e.key === 'ArrowUp') selectedStarter = (selectedStarter - 1 + starters.length) % starters.length;
+        if (e.key === 'ArrowDown') selectedStarter = (selectedStarter + 1) % starters.length;
+        if (e.key === 'a' || e.key === 'A') startGame();
+        return;
+      }
+
       if (e.key === 'ArrowUp') keys.up = true;
       if (e.key === 'ArrowDown') keys.down = true;
       if (e.key === 'ArrowLeft') keys.left = true;
       if (e.key === 'ArrowRight') keys.right = true;
 
       if (battleMode) {
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') battleMenuIndex = 0;
-        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') battleMenuIndex = 1;
-        if (e.key === 'a' || e.key === 'A') {
-          if (battleMenuIndex === 0) playerAttack(); else runFromBattle();
+        if (moveMenuOpen) {
+          if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+            moveMenuIndex = Math.max(0, moveMenuIndex - 1);
+          }
+          if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+            const totalMoves = getMovesForPokemon(player.name).length;
+            moveMenuIndex = Math.min(totalMoves - 1, moveMenuIndex + 1);
+          }
+          if (e.key === 'a' || e.key === 'A') {
+            useSelectedMove();
+          }
+          if (e.key === 'b' || e.key === 'B') {
+            closeMoveMenu();
+          }
+          return;
         }
-        if (e.key === 'b' || e.key === 'B') runFromBattle();
+
+        if (e.key === 'a' || e.key === 'A') {
+          openMoveMenu();
+        }
+        if (e.key === 'b' || e.key === 'B') {
+          runFromBattle();
+        }
       } else if (infoMode && (e.key === 'b' || e.key === 'B')) {
         infoMode = false;
       }
@@ -531,7 +810,9 @@
       if (e.key === 'ArrowRight') keys.right = false;
     });
 
-    loop();
+    loadAssets().then(() => {
+      loop();
+    });
   </script>
 </body>
 </html>
