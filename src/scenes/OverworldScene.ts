@@ -41,6 +41,7 @@ export class OverworldScene extends Phaser.Scene {
   create() {
     this.drawTilemap();
     this.player = new Player(this, this.playerTileX, this.playerTileY, this.tileSize);
+    this.player.setFacing('front');
     this.cursors = this.input.keyboard?.createCursorKeys();
 
     this.input.keyboard?.on('keydown-LEFT', () => this.tryMove(-1, 0));
@@ -122,6 +123,7 @@ export class OverworldScene extends Phaser.Scene {
     this.player.moveToTile(nextX, nextY, this.tileSize);
     this.playerTileX = nextX;
     this.playerTileY = nextY;
+    this.player.setFacing(dy < 0 ? 'back' : 'front');
     this.updateEntrancePrompt();
 
     if (mapLayout[nextY][nextX] === 0 && Math.random() < this.encounterChance) {
