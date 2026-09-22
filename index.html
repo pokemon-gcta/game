@@ -57,8 +57,6 @@
     const mapColumns = 15;
     const mapRows = 10;
 
-    // 1 = blocked, 0 = walkable. This grid matches the visible IMG_5945.webp map.
-    // It blocks the boundary trees, houses, shop, garden/fence and bottom water.
     const collisionMap = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,1,1,0,0,1,1,1,1,0,1],
@@ -72,8 +70,7 @@
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
-    const player = { x: 11, y: 8, color: '#2563eb' };
-    const keys = { up: false, down: false, left: false, right: false };
+    const player = { x: 11, y: 8, color: '#2563eb', facing: 'down' };
     let message = 'Use the arrows or keyboard to explore.';
     let messageTimer = 0;
 
@@ -89,16 +86,11 @@
     }
 
     function drawMap() {
-      if (!mapReady) {
-        drawFallbackMap();
-        return;
-      }
+      if (!mapReady) { drawFallbackMap(); return; }
       const scale = Math.max(canvas.width / mapImage.width, canvas.height / mapImage.height);
       const width = mapImage.width * scale;
       const height = mapImage.height * scale;
-      const x = (canvas.width - width) / 2;
-      const y = (canvas.height - height) / 2;
-      ctx.drawImage(mapImage, x, y, width, height);
+      ctx.drawImage(mapImage, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
     }
 
     function drawFallbackPlayer(x, y) {
@@ -116,11 +108,20 @@
       const y = player.y * tile;
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(x + 4, y + 26, 24, 5);
-      if (playerReady) {
-        ctx.drawImage(playerImage, x, y, tile, tile);
+
+      if (!playerReady) { drawFallbackPlayer(x, y); return; }
+
+      // IMG_5946.png is a single-frame sprite. Flip it for left/right movement.
+      // Up/down use the original image until separate directional frames are added.
+      ctx.save();
+      if (player.facing === 'left') {
+        ctx.translate(x + tile, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(playerImage, 0, 0, tile, tile);
       } else {
-        drawFallbackPlayer(x, y);
+        ctx.drawImage(playerImage, x, y, tile, tile);
       }
+      ctx.restore();
     }
 
     function drawMessage() {
@@ -144,45 +145,41 @@
       return y >= 0 && y < mapRows && x >= 0 && x < mapColumns && collisionMap[y][x] === 0;
     }
 
-    function move(dx, dy) {
+    function move(dx, dy, facing) {
+      player.facing = facing;
       const nextX = player.x + dx;
       const nextY = player.y + dy;
       if (!isWalkable(nextX, nextY)) {
         message = 'You cannot walk there.';
         messageTimer = 90;
+        draw();
         return;
       }
       player.x = nextX;
       player.y = nextY;
       message = `Map position: ${player.x}, ${player.y}`;
       messageTimer = 90;
-    }
-
-    function update() {
-      if (keys.up) move(0, -1);
-      if (keys.down) move(0, 1);
-      if (keys.left) move(-1, 0);
-      if (keys.right) move(1, 0);
-      if (messageTimer > 0) messageTimer--;
+      draw();
     }
 
     function loop() {
-      update();
+      if (messageTimer > 0) messageTimer--;
       draw();
       requestAnimationFrame(loop);
     }
 
-    function bindDirection(id, direction) {
+    function bindDirection(id, dx, dy, facing) {
       const button = document.getElementById(id);
-      button.addEventListener('pointerdown', () => { keys[direction] = true; });
-      button.addEventListener('pointerup', () => { keys[direction] = false; });
-      button.addEventListener('pointerleave', () => { keys[direction] = false; });
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        move(dx, dy, facing);
+      });
     }
 
-    bindDirection('up', 'up');
-    bindDirection('down', 'down');
-    bindDirection('left', 'left');
-    bindDirection('right', 'right');
+    bindDirection('up', 0, -1, 'up');
+    bindDirection('down', 0, 1, 'down');
+    bindDirection('left', -1, 0, 'left');
+    bindDirection('right', 1, 0, 'right');
 
     document.getElementById('aBtn').addEventListener('click', () => {
       message = 'A button pressed.';
@@ -193,19 +190,22 @@
       messageTimer = 90;
     });
 
+    const directionByKey = {
+      ArrowUp: [0, -1, 'up'],
+      ArrowDown: [0, 1, 'down'],
+      ArrowLeft: [-1, 0, 'left'],
+      ArrowRight: [1, 0, 'right']
+    };
+
     window.addEventListener('keydown', (event) => {
-      const directionByKey = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-      if (directionByKey[event.key]) {
+      const direction = directionByKey[event.key];
+      if (direction) {
         event.preventDefault();
-        keys[directionByKey[event.key]] = true;
+        // Ignore browser key-repeat so one key press moves exactly one tile.
+        if (!event.repeat) move(...direction);
       }
       if (event.key.toLowerCase() === 'a') document.getElementById('aBtn').click();
       if (event.key.toLowerCase() === 'b') document.getElementById('bBtn').click();
-    });
-
-    window.addEventListener('keyup', (event) => {
-      const directionByKey = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-      if (directionByKey[event.key]) keys[directionByKey[event.key]] = false;
     });
 
     draw();
