@@ -43,20 +43,36 @@
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    // First overworld map.
     const mapImage = new Image();
     mapImage.src = 'src/images/IMG_5945.webp';
     let mapReady = false;
     mapImage.onload = () => { mapReady = true; draw(); };
 
-    // Player sprite supplied in src/images/IMG_5946.png.
     const playerImage = new Image();
     playerImage.src = 'src/images/IMG_5946.png';
     let playerReady = false;
     playerImage.onload = () => { playerReady = true; draw(); };
 
     const tile = 32;
-    const player = { x: 1, y: 1, color: '#2563eb' };
+    const mapColumns = 15;
+    const mapRows = 10;
+
+    // 1 = blocked, 0 = walkable. This grid matches the visible IMG_5945.webp map.
+    // It blocks the boundary trees, houses, shop, garden/fence and bottom water.
+    const collisionMap = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,1,1,0,0,1,1,1,1,0,1],
+      [1,0,0,0,1,1,1,0,0,1,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,1,1,1,1,0,0,1],
+      [1,0,0,1,1,1,1,0,1,1,1,1,0,0,1],
+      [1,0,0,1,1,1,1,0,1,1,1,1,0,0,1],
+      [1,0,0,0,0,0,0,0,1,1,1,1,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const player = { x: 11, y: 8, color: '#2563eb' };
     const keys = { up: false, down: false, left: false, right: false };
     let message = 'Use the arrows or keyboard to explore.';
     let messageTimer = 0;
@@ -98,12 +114,9 @@
     function drawPlayer() {
       const x = player.x * tile;
       const y = player.y * tile;
-
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(x + 4, y + 26, 24, 5);
-
       if (playerReady) {
-        // IMG_5946.png is a 32x32 player sprite, so it fits one map tile.
         ctx.drawImage(playerImage, x, y, tile, tile);
       } else {
         drawFallbackPlayer(x, y);
@@ -127,15 +140,22 @@
       drawMessage();
     }
 
+    function isWalkable(x, y) {
+      return y >= 0 && y < mapRows && x >= 0 && x < mapColumns && collisionMap[y][x] === 0;
+    }
+
     function move(dx, dy) {
-      const nextX = Math.max(0, Math.min(13, player.x + dx));
-      const nextY = Math.max(0, Math.min(8, player.y + dy));
-      if (nextX !== player.x || nextY !== player.y) {
-        player.x = nextX;
-        player.y = nextY;
-        message = `Map position: ${player.x}, ${player.y}`;
+      const nextX = player.x + dx;
+      const nextY = player.y + dy;
+      if (!isWalkable(nextX, nextY)) {
+        message = 'You cannot walk there.';
         messageTimer = 90;
+        return;
       }
+      player.x = nextX;
+      player.y = nextY;
+      message = `Map position: ${player.x}, ${player.y}`;
+      messageTimer = 90;
     }
 
     function update() {
@@ -174,9 +194,7 @@
     });
 
     window.addEventListener('keydown', (event) => {
-      const directionByKey = {
-        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'
-      };
+      const directionByKey = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
       if (directionByKey[event.key]) {
         event.preventDefault();
         keys[directionByKey[event.key]] = true;
@@ -186,9 +204,7 @@
     });
 
     window.addEventListener('keyup', (event) => {
-      const directionByKey = {
-        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'
-      };
+      const directionByKey = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
       if (directionByKey[event.key]) keys[directionByKey[event.key]] = false;
     });
 
