@@ -132,7 +132,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private updateEntrancePrompt() {
-    const atEntrance = this.playerTileX === professorHouseEntrance.x && this.playerTileY === professorHouseEntrance.y;
+    const atEntrance = this.isNearHouseDoor(this.playerTileX, this.playerTileY);
     this.entrancePrompt?.destroy();
     this.entrancePrompt = undefined;
 
@@ -154,9 +154,16 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private tryEnterHouse() {
-    if (this.playerTileX === professorHouseEntrance.x && this.playerTileY === professorHouseEntrance.y) {
+    if (this.isNearHouseDoor(this.playerTileX, this.playerTileY)) {
       this.scene.start('ProfessorHouseScene');
     }
+  }
+
+  private isNearHouseDoor(x: number, y: number): boolean {
+    return (
+      (x >= 13 && x <= 15 && y >= 11 && y <= 13) ||
+      (x === professorHouseEntrance.x && y === professorHouseEntrance.y)
+    );
   }
 
   private isWalkable(x: number, y: number): boolean {
@@ -164,7 +171,7 @@ export class OverworldScene extends Phaser.Scene {
       return false;
     }
 
-    if (x === professorHouseEntrance.x && y === professorHouseEntrance.y) {
+    if (this.isNearHouseDoor(x, y)) {
       return true;
     }
 
