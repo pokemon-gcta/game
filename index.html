@@ -43,6 +43,10 @@
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
+    const tile = 32;
+    const mapColumns = 15;
+    const mapRows = 10;
+
     const mapImage = new Image();
     mapImage.src = 'src/images/IMG_5945.webp';
     let mapReady = false;
@@ -51,12 +55,40 @@
     const playerImage = new Image();
     playerImage.src = 'src/images/IMG_5946.png';
     let playerReady = false;
-    playerImage.onload = () => { playerReady = true; draw(); };
+    const playerFrames = {};
 
-    const tile = 32;
-    const mapColumns = 15;
-    const mapRows = 10;
+    // Generate directional versions from the supplied player image.
+    // Down is the original; right is the original orientation; left is mirrored;
+    // up is vertically flipped as an approximation until a true sprite sheet is added.
+    function makePlayerFrame(transform) {
+      const frame = document.createElement('canvas');
+      frame.width = tile;
+      frame.height = tile;
+      const frameCtx = frame.getContext('2d');
+      frameCtx.imageSmoothingEnabled = false;
+      frameCtx.save();
+      transform(frameCtx);
+      frameCtx.drawImage(playerImage, 0, 0, tile, tile);
+      frameCtx.restore();
+      return frame;
+    }
 
+    playerImage.onload = () => {
+      playerFrames.down = makePlayerFrame(() => {});
+      playerFrames.right = makePlayerFrame(() => {});
+      playerFrames.left = makePlayerFrame((frameCtx) => {
+        frameCtx.translate(tile, 0);
+        frameCtx.scale(-1, 1);
+      });
+      playerFrames.up = makePlayerFrame((frameCtx) => {
+        frameCtx.translate(0, tile);
+        frameCtx.scale(1, -1);
+      });
+      playerReady = true;
+      draw();
+    };
+
+    // 1 = blocked, 0 = walkable.
     const collisionMap = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,1,1,0,0,1,1,1,1,0,1],
@@ -70,9 +102,11 @@
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
-    const player = { x: 11, y: 8, color: '#2563eb', facing: 'down' };
+    const player = { x: 11, y: 8, facing: 'down', color: '#2563eb' };
     let message = 'Use the arrows or keyboard to explore.';
     let messageTimer = 0;
+    let lastMoveTime = 0;
+    const moveDelay = 120;
 
     function drawFallbackMap() {
       ctx.fillStyle = '#5ec96f';
@@ -93,35 +127,18 @@
       ctx.drawImage(mapImage, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
     }
 
-    function drawFallbackPlayer(x, y) {
-      ctx.fillStyle = 'rgba(0,0,0,.35)';
-      ctx.fillRect(x + 2, y + 24, 26, 6);
-      ctx.fillStyle = player.color;
-      ctx.fillRect(x + 4, y + 4, 24, 24);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(x + 10, y + 9, 4, 4);
-      ctx.fillRect(x + 18, y + 9, 4, 4);
-    }
-
     function drawPlayer() {
       const x = player.x * tile;
       const y = player.y * tile;
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(x + 4, y + 26, 24, 5);
 
-      if (!playerReady) { drawFallbackPlayer(x, y); return; }
-
-      // IMG_5946.png is a single-frame sprite. Flip it for left/right movement.
-      // Up/down use the original image until separate directional frames are added.
-      ctx.save();
-      if (player.facing === 'left') {
-        ctx.translate(x + tile, y);
-        ctx.scale(-1, 1);
-        ctx.drawImage(playerImage, 0, 0, tile, tile);
+      if (playerReady) {
+        ctx.drawImage(playerFrames[player.facing], x, y, tile, tile);
       } else {
-        ctx.drawImage(playerImage, x, y, tile, tile);
+        ctx.fillStyle = player.color;
+        ctx.fillRect(x + 4, y + 4, 24, 24);
       }
-      ctx.restore();
     }
 
     function drawMessage() {
@@ -146,31 +163,26 @@
     }
 
     function move(dx, dy, facing) {
+      const now = performance.now();
+      if (now - lastMoveTime < moveDelay) return;
+      lastMoveTime = now;
       player.facing = facing;
+
       const nextX = player.x + dx;
       const nextY = player.y + dy;
       if (!isWalkable(nextX, nextY)) {
         message = 'You cannot walk there.';
-        messageTimer = 90;
-        draw();
-        return;
+      } else {
+        player.x = nextX;
+        player.y = nextY;
+        message = `Map position: ${player.x}, ${player.y}`;
       }
-      player.x = nextX;
-      player.y = nextY;
-      message = `Map position: ${player.x}, ${player.y}`;
       messageTimer = 90;
       draw();
     }
 
-    function loop() {
-      if (messageTimer > 0) messageTimer--;
-      draw();
-      requestAnimationFrame(loop);
-    }
-
     function bindDirection(id, dx, dy, facing) {
-      const button = document.getElementById(id);
-      button.addEventListener('pointerdown', (event) => {
+      document.getElementById(id).addEventListener('click', (event) => {
         event.preventDefault();
         move(dx, dy, facing);
       });
@@ -201,12 +213,16 @@
       const direction = directionByKey[event.key];
       if (direction) {
         event.preventDefault();
-        // Ignore browser key-repeat so one key press moves exactly one tile.
         if (!event.repeat) move(...direction);
       }
       if (event.key.toLowerCase() === 'a') document.getElementById('aBtn').click();
       if (event.key.toLowerCase() === 'b') document.getElementById('bBtn').click();
     });
+
+    function loop() {
+      if (messageTimer > 0) messageTimer--;
+      requestAnimationFrame(loop);
+    }
 
     draw();
     loop();
